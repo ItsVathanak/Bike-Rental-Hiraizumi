@@ -48,7 +48,7 @@ export default function App() {
   );
 
   async function fetchBikes() {
-    const r = await fetch(`${API_BASE}/api/bikes`);
+    const r = await fetch(`${API_BASE}/bikes`);
     const data = await r.json();
     setBikes(data);
     if (data?.[0]?.id && !data.find((b) => b.id === selectedBikeId)) {
@@ -57,7 +57,7 @@ export default function App() {
   }
 
   async function fetchRentals() {
-    const r = await fetch(`${API_BASE}/api/rentals`);
+    const r = await fetch(`${API_BASE}/rentals`);
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
     setRentals(data);
@@ -89,7 +89,7 @@ export default function App() {
       const username = formData.get("username");
       const password = formData.get("password");
 
-      const r = await fetch(`${API_BASE}/api/admin/login`, {
+      const r = await fetch(`${API_BASE}/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -118,7 +118,7 @@ export default function App() {
     setAdminError("");
     setAdminSuccess("");
     try {
-      const r = await fetch(`${API_BASE}/api/bikes`, {
+      const r = await fetch(`${API_BASE}/bikes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(adminBike),
@@ -136,7 +136,7 @@ export default function App() {
     setAdminError("");
     setAdminSuccess("");
     try {
-      const r = await fetch(`${API_BASE}/api/bikes/${bikeId}`, {
+      const r = await fetch(`${API_BASE}/bikes/${bikeId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(details),
@@ -159,7 +159,7 @@ export default function App() {
     setAdminError("");
     setAdminSuccess("");
     try {
-      const r = await fetch(`${API_BASE}/api/bikes/${bikeId}`, { method: "DELETE" });
+      const r = await fetch(`${API_BASE}/bikes/${bikeId}`, { method: "DELETE" });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
       setAdminSuccess(data.message || `Bike ${bikeId} deleted.`);
@@ -172,7 +172,7 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/notifications/admin`);
+        const r = await fetch(`${API_BASE}/notifications/admin`);
         if (r.ok) {
           const newNotifications = await r.json();
           if (newNotifications.length > 0) {
@@ -507,7 +507,7 @@ export default function App() {
                         setPriceSuccess("");
                         
                         // Update electric bikes
-                        const r1 = await fetch(`${API_BASE}/api/bikes/update-price-by-type`, {
+                        const r1 = await fetch(`${API_BASE}/bikes/update-price-by-type`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ bikeType: 'electric', price: prices.electric }),
@@ -515,7 +515,7 @@ export default function App() {
                         if (!r1.ok) throw new Error('Failed to update electric bike prices');
                         
                         // Update non-electric bikes
-                        const r2 = await fetch(`${API_BASE}/api/bikes/update-price-by-type`, {
+                        const r2 = await fetch(`${API_BASE}/bikes/update-price-by-type`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ bikeType: 'non-electric', price: prices["non-electric"] }),

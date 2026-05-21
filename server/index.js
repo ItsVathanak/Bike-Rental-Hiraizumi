@@ -27,7 +27,7 @@ function generateSessionId() {
 }
 
 // --- User Authentication ---
-app.post('/api/login', async (req, res) => {
+app.post('/login', async (req, res) => {
   const { userId, password } = req.body
   if (!userId || !password) {
     return res.status(400).json({ error: 'userId and password are required' })
@@ -57,7 +57,7 @@ app.post('/api/login', async (req, res) => {
 })
 
 // Register new user
-app.post('/api/register', async (req, res) => {
+app.post('/register', async (req, res) => {
   const { userId, password, name, email } = req.body
   
   if (!userId || !password || !name || !email) {
@@ -104,7 +104,7 @@ app.post('/api/register', async (req, res) => {
 })
 
 // Admin login
-app.post('/api/admin/login', async (req, res) => {
+app.post('/admin/login', async (req, res) => {
   const { username, password } = req.body
   
   if (!username || !password) {
@@ -148,7 +148,7 @@ app.post('/api/admin/login', async (req, res) => {
 })
 
 // Get active rental for a user
-app.get('/api/rentals/active/:userId', async (req, res) => {
+app.get('/rentals/active/:userId', async (req, res) => {
   const { userId } = req.params
 
   try {
@@ -193,7 +193,7 @@ app.get('/api/rentals/active/:userId', async (req, res) => {
 })
 
 // List bikes
-app.get('/api/bikes', async (req, res) => {
+app.get('/bikes', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('bikes')
@@ -217,7 +217,7 @@ app.get('/api/bikes', async (req, res) => {
 })
 
 // Get all rental sessions
-app.get('/api/rentals', async (req, res) => {
+app.get('/rentals', async (req, res) => {
   try {
     const { data: rentals, error } = await supabase
       .from('rentals')
@@ -257,7 +257,7 @@ app.get('/api/rentals', async (req, res) => {
 
 const upload = multer({ dest: 'uploads/' })
 
-app.post('/api/rentals', async (req, res) => {
+app.post('/rentals', async (req, res) => {
   const { bikeId, userId } = req.body
 
   if (!bikeId || !userId) {
@@ -328,7 +328,7 @@ app.post('/api/rentals', async (req, res) => {
   }
 })
 
-app.post('/api/rentals/start-return', async (req, res) => {
+app.post('/rentals/start-return', async (req, res) => {
   const { userId } = req.body
 
   try {
@@ -389,7 +389,7 @@ app.post('/api/rentals/start-return', async (req, res) => {
   }
 })
 
-app.post('/api/rentals/return', upload.single('photo'), async (req, res) => {
+app.post('/rentals/return', upload.single('photo'), async (req, res) => {
   const { sessionId } = req.body
 
   if (!sessionId) {
@@ -497,7 +497,7 @@ app.post('/api/rentals/return', upload.single('photo'), async (req, res) => {
 })
 
 // Notifications
-app.get('/api/notifications/:userId', async (req, res) => {
+app.get('/notifications/:userId', async (req, res) => {
   const { userId } = req.params
 
   try {
@@ -530,7 +530,7 @@ app.get('/api/notifications/:userId', async (req, res) => {
 })
 
 // Get a single rental session
-app.get('/api/rentals/:id', async (req, res) => {
+app.get('/rentals/:id', async (req, res) => {
   try {
     const { data: rental, error } = await supabase
       .from('rentals')
@@ -550,7 +550,7 @@ app.get('/api/rentals/:id', async (req, res) => {
 })
 
 // Admin actions
-app.post('/api/bikes', async (req, res) => {
+app.post('/bikes', async (req, res) => {
   const { id, name, station, lockboxCode } = req.body
 
   if (!id || !name || !station || !lockboxCode) {
@@ -604,7 +604,7 @@ app.post('/api/bikes', async (req, res) => {
 })
 
 // Update bike prices by type
-app.put('/api/bikes/update-price-by-type', async (req, res) => {
+app.put('/bikes/update-price-by-type', async (req, res) => {
   const { bikeType, price } = req.body
 
   if (!bikeType || price === undefined || price === null) {
@@ -632,7 +632,7 @@ app.put('/api/bikes/update-price-by-type', async (req, res) => {
   }
 })
 
-app.put('/api/bikes/:id', async (req, res) => {
+app.put('/bikes/:id', async (req, res) => {
   const { name, station, status, lockboxCode } = req.body
 
   if (lockboxCode && !/^\d{4}$/.test(lockboxCode)) {
@@ -670,7 +670,7 @@ app.put('/api/bikes/:id', async (req, res) => {
   }
 })
 
-app.delete('/api/bikes/:id', async (req, res) => {
+app.delete('/bikes/:id', async (req, res) => {
   try {
     const { data: bike, error: fetchError } = await supabase
       .from('bikes')
