@@ -1,12 +1,15 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import multer from 'multer'
+// import multer from 'multer'  // Disabled for Vercel (serverless - no disk writes)
 import { createClient } from '@supabase/supabase-js'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// Multer disabled for Vercel - use in-memory or cloud storage instead
+// const upload = multer({ dest: 'uploads/' })
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL
@@ -389,7 +392,7 @@ app.post('/rentals/start-return', async (req, res) => {
   }
 })
 
-app.post('/rentals/return', upload.single('photo'), async (req, res) => {
+app.post('/rentals/return', async (req, res) => {
   const { sessionId } = req.body
 
   if (!sessionId) {
@@ -419,18 +422,19 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
       })
     }
 
-    if (!req.file) {
-      return res.status(400).json({ message: 'Return photo is required.' })
-    }
+    // Photo upload disabled for Vercel (serverless - no disk writes)
+    // if (!req.file) {
+    //   return res.status(400).json({ message: 'Return photo is required.' })
+    // }
 
-    console.log('Received photo:', req.file.filename, 'size:', req.file.size)
+    // console.log('Received photo:', req.file.filename, 'size:', req.file.size)
 
     const events = rental.events || []
     events.push({
       type: 'photo_received',
       timestamp: nowIso(),
-      filename: req.file.filename,
-      size: req.file.size,
+      filename: 'vercel-upload-disabled', // Placeholder - photo upload not supported
+      size: 0,
     })
 
     const { data: bike } = await supabase
