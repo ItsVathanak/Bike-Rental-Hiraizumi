@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 
-const API_BASE_URL = 'http://192.168.0.123:8787/api';
+const API_BASE_URL = 'https://bike-rental-hiraizumi-server.vercel.app/api';
 
 // 1. Create Auth Context
 const AuthContext = createContext();
