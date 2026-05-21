@@ -738,8 +738,8 @@ export default app
 
 // Start local server only in development
 if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 8787
-  app.listen(PORT, () => {
+  const PORT = process.env.PORT || 3000
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`)
     console.log('Connected to Supabase')
   })
