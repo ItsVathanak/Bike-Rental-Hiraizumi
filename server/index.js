@@ -258,8 +258,6 @@ app.get('/rentals', async (req, res) => {
   }
 })
 
-const upload = multer({ dest: 'uploads/' })
-
 app.post('/rentals', async (req, res) => {
   const { bikeId, userId } = req.body
 
