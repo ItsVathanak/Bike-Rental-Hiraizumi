@@ -531,6 +531,35 @@ app.get('/notifications/:userId', async (req, res) => {
   }
 })
 
+// Get all notifications for admin
+app.get('/notifications/admin', async (req, res) => {
+  try {
+    const { data: notifications, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('read', false)
+      .order('timestamp', { ascending: false })
+
+    if (error) throw error
+
+    res.json(notifications.map(n => ({
+      to: n.to_user_id,
+      message: n.message,
+      timestamp: n.timestamp,
+      read: n.read,
+    })))
+
+    // Mark as read
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('read', false)
+  } catch (err) {
+    console.error('Error fetching admin notifications:', err)
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 // Get a single rental session
 app.get('/rentals/:id', async (req, res) => {
   try {
