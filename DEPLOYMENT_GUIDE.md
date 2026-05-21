@@ -74,48 +74,88 @@ The mobile app is built with Expo and can be:
 3. **Deploy:**
    - Vercel auto-deploys on push to main
 
-### Step 4: Deploy Backend Server
+### Step 4: Deploy Backend Server to Vercel
 
-**Option A: Railway (Recommended)**
-1. Go to https://railway.app
-2. Click "New Project" → "Deploy from GitHub"
-3. Select your repository
-4. Set working directory: `server`
-5. Add environment variables:
+**Why Vercel for Backend?**
+- Permanently free tier (no limitations)
+- Automatic deployments on GitHub push
+- Built-in environment variables management
+- Node.js serverless functions support
+- Same dashboard as web frontend
+
+**Steps:**
+
+1. **Create `vercel.json` in `server/` folder** (if not already created):
+   ```json
+   {
+     "buildCommand": "npm install",
+     "functions": {
+       "api/**/*.js": {
+         "memory": 1024,
+         "maxDuration": 30
+       }
+     }
+   }
    ```
-   SUPABASE_URL=https://okynwmzzodvxeeputbvn.supabase.co
-   SUPABASE_ANON_KEY=sb_publishable_hKZ4hTdQY8dK4Bi3x8R_9Q_cfYzYJ1L
-   PORT=8787
+
+2. **Ensure `server/package.json` has proper scripts:**
+   ```json
+   {
+     "scripts": {
+       "start": "node index.js",
+       "dev": "node index.js"
+     }
+   }
    ```
-6. Deploy!
 
-**Option B: Heroku**
-1. Install Heroku CLI
-2. `heroku login`
-3. `heroku create YOUR_APP_NAME`
-4. `git push heroku main`
+3. **Go to Vercel Dashboard:**
+   - https://vercel.com/dashboard
+   - Click "Add New" → "Project"
+   - Import your GitHub repository
+   - Set **Root Directory** to `server`
 
-**Option C: Your own VPS**
-1. SSH into your server
-2. Clone the repo
-3. Install Node.js
-4. `npm install` and `npm start`
+4. **Add Environment Variables:**
+   - `SUPABASE_URL=https://okynwmzzodvxeeputbvn.supabase.co`
+   - `SUPABASE_ANON_KEY=sb_publishable_hKZ4hTdQY8dK4Bi3x8R_9Q_cfYzYJ1L`
 
-### Step 5: Update Mobile App API URL
+5. **Click Deploy!**
+   - Vercel will build and deploy automatically
+   - You'll get a URL like: `https://your-project.vercel.app`
+   - **Copy this URL** - you'll need it next
 
-Once backend is deployed, update the API URL:
-- File: `mobile-app/App.js`
-- Line 11: `const API_BASE_URL = 'https://YOUR_BACKEND_URL/api'`
+### Step 5: Update Web Dashboard with Backend URL
 
-Then rebuild and deploy the mobile app.
+Once backend is deployed on Vercel:
 
-### Step 6: Update Web Dashboard API URL
+1. **Get your backend URL** from Vercel dashboard (e.g., `https://bike-backend.vercel.app`)
 
-Once backend is deployed, update the API URL:
-- File: `web/src/App.jsx`
-- Line 3: `const API_BASE = import.meta.env.VITE_API_BASE || "https://YOUR_BACKEND_URL"`
+2. **Go to your Web Dashboard Vercel project:**
+   - Click "Settings"
+   - Click "Environment Variables"
 
-Vercel will auto-redeploy when you push changes.
+3. **Update `VITE_API_BASE` variable:**
+   - Name: `VITE_API_BASE`
+   - Value: `https://your-backend-url.vercel.app/api`
+   - (Replace with actual backend URL)
+
+4. **Trigger a redeploy:**
+   - Go to "Deployments"
+   - Click the latest deployment
+   - Click "..." menu → "Redeploy"
+   - Wait for redeployment (2-3 minutes)
+
+### Step 6: Update Mobile App API URL
+
+Once backend is deployed, update the mobile app:
+
+1. **Edit:** `mobile-app/App.js` (Line 11)
+   ```javascript
+   const API_BASE_URL = 'https://your-backend-url.vercel.app/api'
+   ```
+
+2. **Rebuild mobile app:**
+   - If using Expo: `cd mobile-app && npm start` and scan QR code
+   - If using EAS: `eas build --platform android`
 
 ---
 
@@ -194,7 +234,29 @@ Before deploying to production, complete:
 
 ---
 
-## Quick Reference
+## Summary: All Components Deployed on Vercel (Free)
+
+✅ **Web Dashboard** - Vercel (Free)
+✅ **Backend Server** - Vercel (Free)  
+✅ **Mobile App** - Expo (Free)
+✅ **Database** - Supabase (Free tier)
+
+**No monthly costs!** Everything is on permanently free tiers.
+
+---
+
+## Vercel Backend Details
+
+Your Express backend runs on Vercel as serverless functions. The current `server/index.js` works as-is with minimal changes:
+
+- Vercel automatically wraps Express into serverless functions
+- All routes remain the same (`/api/login`, `/api/bikes`, etc.)
+- No need to convert individual routes
+- Simply push to GitHub and Vercel deploys automatically
+
+For more details, see **VERCEL_DEPLOYMENT.md** in this folder.
+
+---
 
 **User Credentials (Demo)**
 - Username: johnnexon / user1 / user2
