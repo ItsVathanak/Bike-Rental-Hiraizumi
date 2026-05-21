@@ -29,7 +29,7 @@ Thumbs.db
 # Expo
 .expo/
 .expo-shared/
-dist/
+# dist/
 
 # Misc
 .cache/
