@@ -10,7 +10,7 @@ yarn-error.log
 .env.*.local
 
 # Build outputs
-dist/
+# dist/
 build/
 .next/
 out/
