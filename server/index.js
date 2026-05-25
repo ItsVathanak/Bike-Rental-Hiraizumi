@@ -1,15 +1,11 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-// import multer from 'multer'  // Disabled for Vercel (serverless - no disk writes)
 import { createClient } from '@supabase/supabase-js'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
-
-// Multer disabled for Vercel - use in-memory or cloud storage instead
-// const upload = multer({ dest: 'uploads/' })
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL
@@ -414,24 +410,18 @@ app.post('/rentals/return', async (req, res) => {
       })
     }
 
+    // Note: Photo upload is not supported in current deployment
     if (!rental.return_info) {
       return res.status(400).json({
         message: 'Return process was not started correctly.',
       })
     }
 
-    // Photo upload disabled for Vercel (serverless - no disk writes)
-    // if (!req.file) {
-    //   return res.status(400).json({ message: 'Return photo is required.' })
-    // }
-
-    // console.log('Received photo:', req.file.filename, 'size:', req.file.size)
-
     const events = rental.events || []
     events.push({
       type: 'photo_received',
       timestamp: nowIso(),
-      filename: 'vercel-upload-disabled', // Placeholder - photo upload not supported
+      filename: 'no-upload',
       size: 0,
     })
 
@@ -733,14 +723,9 @@ app.delete('/bikes/:id', async (req, res) => {
   }
 })
 
-// Export for Vercel serverless functions
-export default app
-
-// Start local server only in development
-// Ensure PORT is pulled from environment variables, defaulting to 3000 for local dev
+// Start server
 const PORT = process.env.PORT || 3000;
 
-// Remove the "if" statement so this runs on Render
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
