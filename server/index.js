@@ -1,11 +1,15 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import multer from 'multer'
 import { createClient } from '@supabase/supabase-js'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// Configure multer for in-memory file storage
+const upload = multer({ storage: multer.memoryStorage() })
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL
@@ -386,7 +390,7 @@ app.post('/rentals/start-return', async (req, res) => {
   }
 })
 
-app.post('/rentals/return', async (req, res) => {
+app.post('/rentals/return', upload.single('photo'), async (req, res) => {
   const { sessionId } = req.body
 
   if (!sessionId) {
@@ -410,20 +414,56 @@ app.post('/rentals/return', async (req, res) => {
       })
     }
 
-    // Note: Photo upload is not supported in current deployment
     if (!rental.return_info) {
       return res.status(400).json({
         message: 'Return process was not started correctly.',
       })
     }
 
+    let photoUrl = null
     const events = rental.events || []
-    events.push({
-      type: 'photo_received',
-      timestamp: nowIso(),
-      filename: 'no-upload',
-      size: 0,
-    })
+
+    // Handle photo upload to Supabase Storage
+    if (req.file) {
+      try {
+        const timestamp = Date.now()
+        const fileName = `${sessionId}-${timestamp}.jpg`
+        const filePath = `rental-photos/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('rental-photos')
+          .upload(filePath, req.file.buffer, {
+            contentType: req.file.mimetype,
+          })
+
+        if (uploadError) throw uploadError
+
+        // Get public URL
+        const { data } = supabase.storage
+          .from('rental-photos')
+          .getPublicUrl(filePath)
+
+        photoUrl = data.publicUrl
+
+        events.push({
+          type: 'photo_received',
+          timestamp: nowIso(),
+          filename: fileName,
+          size: req.file.size,
+          photoUrl: photoUrl,
+        })
+      } catch (uploadErr) {
+        console.error('Photo upload error:', uploadErr)
+        return res.status(500).json({ message: 'Failed to upload photo' })
+      }
+    } else {
+      events.push({
+        type: 'photo_received',
+        timestamp: nowIso(),
+        filename: 'no-photo',
+        size: 0,
+      })
+    }
 
     const { data: bike } = await supabase
       .from('bikes')
@@ -446,6 +486,7 @@ app.post('/rentals/return', async (req, res) => {
       .update({
         rental_status: 'returned',
         ended_at: now,
+        photo_url: photoUrl,
         events,
       })
       .eq('session_id', sessionId)

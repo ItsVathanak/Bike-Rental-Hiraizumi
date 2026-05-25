@@ -74,6 +74,7 @@ function ActiveRentalScreen({ route, navigation }) {
     try {
       const formData = new FormData();
       formData.append('sessionId', rentalSession.sessionId);
+      
       if (photo) {
         const uriParts = photo.split('.');
         const fileType = uriParts[uriParts.length - 1];
