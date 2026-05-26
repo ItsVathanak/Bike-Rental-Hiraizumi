@@ -145,10 +145,14 @@ function ActiveRentalScreen({ route, navigation }) {
       )}
 
       {returnStep === 'takePhoto' && (
-        <Button
-          title="Take Photo of Locked Bike"
-          onPress={handleTakePhoto}
-        />
+        <View>
+          <Text style={styles.detail}>Take a photo of the locked bike.</Text>
+          <View style={{marginTop: 15}} />
+          <Button
+            title="Take Photo of Locked Bike"
+            onPress={handleTakePhoto}
+          />
+        </View>
       )}
 
       {returnStep === 'photoTaken' && photo && (
@@ -385,6 +389,16 @@ function BikeListScreen({ navigation }) {
 
     return unsubscribe;
   }, [navigation, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      getActiveBikesAndRental();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <View style={{ flex: 1, padding: 24 }}>
