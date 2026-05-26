@@ -264,13 +264,18 @@ export default function App() {
         <nav className="space-y-2">
           <button
             onClick={() => setActiveSection("notifications")}
-            className={`w-full text-left px-4 py-3 rounded-lg font-medium transition ${
+            className={`w-full text-left px-4 py-3 rounded-lg font-medium transition relative ${
               activeSection === "notifications" 
                 ? "bg-blue-600 text-white" 
                 : "text-slate-300 hover:bg-slate-800"
             }`}
           >
             Notifications
+            {notifications.length > 0 && (
+              <span className="absolute top-2 right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                {notifications.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveSection("bikes")}
