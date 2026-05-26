@@ -125,10 +125,13 @@ export default function App() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
-      setAdminSuccess(`Bike ${data.id} created successfully!`);
+      const message = `Bike ${data.id} created successfully!`;
+      setNotifications(prev => [...prev, {message, timestamp: new Date().toISOString()}]);
       await fetchBikes();
     } catch (err) {
-      setAdminError(String(err.message || err));
+      const errorMsg = String(err.message || err);
+      setAdminError(errorMsg);
+      setNotifications(prev => [...prev, {message: `Error: ${errorMsg}`, timestamp: new Date().toISOString()}]);
     }
   }
 
@@ -143,11 +146,14 @@ export default function App() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
-      setAdminSuccess(`Bike ${data.id} updated successfully!`);
+      const message = `Bike ${data.id} updated successfully!`;
+      setNotifications(prev => [...prev, {message, timestamp: new Date().toISOString()}]);
       await fetchBikes();
       return data;
     } catch (err) {
-      setAdminError(String(err.message || err));
+      const errorMsg = String(err.message || err);
+      setAdminError(errorMsg);
+      setNotifications(prev => [...prev, {message: `Error: ${errorMsg}`, timestamp: new Date().toISOString()}]);
       throw err;
     }
   }
@@ -162,10 +168,13 @@ export default function App() {
       const r = await fetch(`${API_BASE}/bikes/${bikeId}`, { method: "DELETE" });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
-      setAdminSuccess(data.message || `Bike ${bikeId} deleted.`);
+      const message = data.message || `Bike ${bikeId} deleted.`;
+      setNotifications(prev => [...prev, {message, timestamp: new Date().toISOString()}]);
       await fetchBikes();
     } catch (err) {
-      setAdminError(String(err.message || err));
+      const errorMsg = String(err.message || err);
+      setAdminError(errorMsg);
+      setNotifications(prev => [...prev, {message: `Error: ${errorMsg}`, timestamp: new Date().toISOString()}]);
     }
   }
 
@@ -384,6 +393,10 @@ export default function App() {
                     }`}>
                       {selectedBike?.status ?? "-"}
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                    <span className="text-slate-600">Bike Type:</span>
+                    <span className="font-semibold">{selectedBike?.bikeType ? (selectedBike.bikeType === 'electric' ? 'Electric' : 'Non-Electric') : "-"}</span>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-slate-50 rounded">
                     <span className="text-slate-600">Lockbox Code:</span>
