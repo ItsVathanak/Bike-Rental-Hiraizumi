@@ -428,22 +428,36 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
       try {
         const timestamp = Date.now()
         const fileName = `${sessionId}-${timestamp}.jpg`
-        const filePath = `rental-photos/${fileName}`
+        const filePath = fileName
 
-        const { error: uploadError } = await supabase.storage
+        console.log('Attempting photo upload:', { filePath, size: req.file.size, mimetype: req.file.mimetype })
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('rental-photos')
           .upload(filePath, req.file.buffer, {
             contentType: req.file.mimetype,
+            upsert: false,
           })
 
-        if (uploadError) throw uploadError
+        if (uploadError) {
+          console.error('Supabase upload error:', uploadError)
+          throw new Error(`Upload failed: ${uploadError.message}`)
+        }
+
+        console.log('Upload successful:', uploadData)
 
         // Get public URL
-        const { data } = supabase.storage
+        const { data: urlData } = supabase.storage
           .from('rental-photos')
           .getPublicUrl(filePath)
 
-        photoUrl = data.publicUrl
+        photoUrl = urlData?.publicUrl
+
+        if (!photoUrl) {
+          throw new Error('Failed to generate public URL')
+        }
+
+        console.log('Public URL generated:', photoUrl)
 
         events.push({
           type: 'photo_received',
@@ -453,8 +467,8 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
           photoUrl: photoUrl,
         })
       } catch (uploadErr) {
-        console.error('Photo upload error:', uploadErr)
-        return res.status(500).json({ message: 'Failed to upload photo' })
+        console.error('Photo upload error:', uploadErr.message || uploadErr)
+        return res.status(500).json({ message: `Failed to upload photo: ${uploadErr.message}` })
       }
     } else {
       events.push({
