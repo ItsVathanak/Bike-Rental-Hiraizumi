@@ -346,7 +346,7 @@ app.post('/rentals/start-return', async (req, res) => {
 
     const { data: bike } = await supabase
       .from('bikes')
-      .select('id')
+      .select('id, name')
       .eq('id', rental.bike_id)
       .single()
 
@@ -378,6 +378,7 @@ app.post('/rentals/start-return', async (req, res) => {
     res.json({
       sessionId: rental.session_id,
       bikeId: rental.bike_id,
+      bikeName: bike.name,
       customer: { userId: rental.customer_id },
       rentalStatus: rental.rental_status,
       lockboxCode: rental.lockbox_code,
