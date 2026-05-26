@@ -428,7 +428,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
       try {
         const timestamp = Date.now()
         const fileName = `${sessionId}-${timestamp}.jpg`
-        const filePath = fileName
+        const filePath = `public/${fileName}`
 
         console.log('Attempting photo upload:', { filePath, size: req.file.size, mimetype: req.file.mimetype })
 
