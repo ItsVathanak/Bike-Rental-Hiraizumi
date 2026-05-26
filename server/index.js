@@ -627,16 +627,20 @@ app.get('/rentals/:id', async (req, res) => {
 
 // Admin actions
 app.post('/bikes', async (req, res) => {
-  const { id, name, station, lockboxCode } = req.body
+  const { id, name, station, lockboxCode, bikeType } = req.body
 
-  if (!id || !name || !station || !lockboxCode) {
+  if (!id || !name || !station || !lockboxCode || !bikeType) {
     return res.status(400).json({
-      error: 'id, name, station, and lockboxCode are required',
+      error: 'id, name, station, lockboxCode, and bikeType are required',
     })
   }
 
   if (!/^\d{4}$/.test(lockboxCode)) {
     return res.status(400).json({ error: 'Lockbox code must be exactly 4 digits' })
+  }
+
+  if (!['electric', 'non-electric'].includes(bikeType)) {
+    return res.status(400).json({ error: 'bikeType must be either "electric" or "non-electric"' })
   }
 
   try {
@@ -650,6 +654,16 @@ app.post('/bikes', async (req, res) => {
       return res.status(409).json({ error: `Bike with id ${id} already exists` })
     }
 
+    // Get the price for the bike type
+    const { data: bikeTypeData, error: priceError } = await supabase
+      .from('bikes')
+      .select('price')
+      .eq('bike_type', bikeType)
+      .limit(1)
+      .single()
+
+    const price = bikeTypeData?.price || (bikeType === 'electric' ? 1000 : 500)
+
     const { data: newBike, error } = await supabase
       .from('bikes')
       .insert({
@@ -658,8 +672,8 @@ app.post('/bikes', async (req, res) => {
         station,
         status: 'available',
         lockbox_code: lockboxCode,
-        bike_type: 'non-electric',
-        price: 5.00,
+        bike_type: bikeType,
+        price,
       })
       .select()
       .single()
