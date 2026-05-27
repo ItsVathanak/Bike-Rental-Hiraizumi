@@ -56,6 +56,24 @@ export default function App() {
     }
   }
 
+  async function fetchPrices() {
+    try {
+      const r = await fetch(`${API_BASE}/bikes`);
+      const bikes = await r.json();
+      if (!r.ok || !bikes.length) return;
+
+      const electricBike = bikes.find((b) => b.bikeType === 'electric');
+      const nonElectricBike = bikes.find((b) => b.bikeType === 'non-electric');
+
+      setPrices({
+        electric: electricBike?.price || 1000,
+        'non-electric': nonElectricBike?.price || 500,
+      });
+    } catch (err) {
+      console.error('Failed to fetch prices:', err);
+    }
+  }
+
   async function fetchRentals() {
     const r = await fetch(`${API_BASE}/rentals`);
     const data = await r.json();
@@ -66,6 +84,7 @@ export default function App() {
 
   useEffect(() => {
     fetchBikes();
+    fetchPrices();
     fetchRentals().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -433,14 +452,14 @@ export default function App() {
                   />
                   <input
                     type="text"
-                    placeholder="Name (e.g., Station B - Slot 1)"
+                    placeholder="Name (e.g., Sharehouse 1 - Bike 1)"
                     value={adminBike.name}
                     onChange={(e) => setAdminBike({ ...adminBike, name: e.target.value })}
                     className="border rounded-lg px-3 py-2 w-full"
                   />
                   <input
                     type="text"
-                    placeholder="Station"
+                    placeholder="Station (e.g., Sharehouse 1)"
                     value={adminBike.station}
                     onChange={(e) => setAdminBike({ ...adminBike, station: e.target.value })}
                     className="border rounded-lg px-3 py-2 w-full"
