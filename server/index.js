@@ -14,12 +14,18 @@ const upload = multer({ storage: multer.memoryStorage() })
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env')
 }
 
+if (!supabaseServiceKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY must be set in .env for RLS admin operations')
+}
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
 function nowIso() {
   return new Date().toISOString()
@@ -155,7 +161,7 @@ app.get('/rentals/active/:userId', async (req, res) => {
   const { userId } = req.params
 
   try {
-    const { data: rental, error } = await supabase
+    const { data: rental, error } = await supabaseAdmin
       .from('rentals')
       .select('*')
       .eq('customer_id', userId)
@@ -170,7 +176,7 @@ app.get('/rentals/active/:userId', async (req, res) => {
       return res.json(null)
     }
 
-    const { data: bike } = await supabase
+    const { data: bike } = await supabaseAdmin
       .from('bikes')
       .select('name')
       .eq('id', rental.bike_id)
@@ -219,10 +225,10 @@ app.get('/bikes', async (req, res) => {
   }
 })
 
-// Get all rental sessions
+// Get all rental sessions (admin only)
 app.get('/rentals', async (req, res) => {
   try {
-    const { data: rentals, error } = await supabase
+    const { data: rentals, error } = await supabaseAdmin
       .from('rentals')
       .select('*')
       .order('created_at', { ascending: false })
@@ -230,7 +236,7 @@ app.get('/rentals', async (req, res) => {
     if (error) throw error
 
     const detailedRentals = await Promise.all(rentals.map(async (rental) => {
-      const { data: bike } = await supabase
+      const { data: bike } = await supabaseAdmin
         .from('bikes')
         .select('name')
         .eq('id', rental.bike_id)
@@ -266,7 +272,7 @@ app.post('/rentals', async (req, res) => {
   }
 
   try {
-    const { data: bike, error: bikeError } = await supabase
+    const { data: bike, error: bikeError } = await supabaseAdmin
       .from('bikes')
       .select('*')
       .eq('id', bikeId)
@@ -288,7 +294,7 @@ app.post('/rentals', async (req, res) => {
       customer: { userId },
     }]
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('rentals')
       .insert({
         session_id: sessionId,
@@ -305,7 +311,7 @@ app.post('/rentals', async (req, res) => {
 
     if (insertError) throw insertError
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('bikes')
       .update({ status: 'rented' })
       .eq('id', bikeId)
@@ -333,7 +339,7 @@ app.post('/rentals/start-return', async (req, res) => {
   const { userId } = req.body
 
   try {
-    const { data: rental, error: fetchError } = await supabase
+    const { data: rental, error: fetchError } = await supabaseAdmin
       .from('rentals')
       .select('*')
       .eq('customer_id', userId)
@@ -344,7 +350,7 @@ app.post('/rentals/start-return', async (req, res) => {
       return res.status(404).json({ message: 'Active rental not found.' })
     }
 
-    const { data: bike } = await supabase
+    const { data: bike } = await supabaseAdmin
       .from('bikes')
       .select('id, name')
       .eq('id', rental.bike_id)
@@ -364,7 +370,7 @@ app.post('/rentals/start-return', async (req, res) => {
       timestamp: nowIso(),
     })
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('rentals')
       .update({
         return_info: returnInfo,
@@ -399,7 +405,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
   }
 
   try {
-    const { data: rental, error: fetchError } = await supabase
+    const { data: rental, error: fetchError } = await supabaseAdmin
       .from('rentals')
       .select('*')
       .eq('session_id', sessionId)
@@ -480,7 +486,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
       })
     }
 
-    const { data: bike } = await supabase
+    const { data: bike } = await supabaseAdmin
       .from('bikes')
       .select('*')
       .eq('id', rental.bike_id)
@@ -496,7 +502,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
       timestamp: now,
     })
 
-    const { error: updateRentalError } = await supabase
+    const { error: updateRentalError } = await supabaseAdmin
       .from('rentals')
       .update({
         rental_status: 'returned',
@@ -508,7 +514,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
 
     if (updateRentalError) throw updateRentalError
 
-    const { error: updateBikeError } = await supabase
+    const { error: updateBikeError } = await supabaseAdmin
       .from('bikes')
       .update({ status: 'available' })
       .eq('id', rental.bike_id)
@@ -516,14 +522,14 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
     if (updateBikeError) throw updateBikeError
 
     // Notify user
-    await supabase.from('notifications').insert({
+    await supabaseAdmin.from('notifications').insert({
       to_user_id: rental.customer_id,
       message: `Your rental for ${bike.name} is complete. Thank you!`,
       read: false,
     })
 
     // Notify admins
-    const { data: admins } = await supabase
+    const { data: admins } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('role', 'admin')
@@ -534,7 +540,7 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
         message: `Bike ${bike.name} was returned. Please update the lockbox code.`,
         read: false,
       }))
-      await supabase.from('notifications').insert(adminNotifications)
+      await supabaseAdmin.from('notifications').insert(adminNotifications)
     }
 
     res.json({ message: 'Bike returned successfully', rental })
@@ -645,7 +651,7 @@ app.post('/bikes', async (req, res) => {
   }
 
   try {
-    const { data: existingBike } = await supabase
+    const { data: existingBike } = await supabaseAdmin
       .from('bikes')
       .select('id')
       .eq('id', id)
@@ -656,7 +662,7 @@ app.post('/bikes', async (req, res) => {
     }
 
     // Get the price for the bike type
-    const { data: bikeTypeData, error: priceError } = await supabase
+    const { data: bikeTypeData, error: priceError } = await supabaseAdmin
       .from('bikes')
       .select('price')
       .eq('bike_type', bikeType)
@@ -665,7 +671,7 @@ app.post('/bikes', async (req, res) => {
 
     const price = bikeTypeData?.price || (bikeType === 'electric' ? 1000 : 500)
 
-    const { data: newBike, error } = await supabase
+    const { data: newBike, error } = await supabaseAdmin
       .from('bikes')
       .insert({
         id,
@@ -705,7 +711,7 @@ app.put('/bikes/update-price-by-type', async (req, res) => {
   }
 
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('bikes')
       .update({ price: Number(price) })
       .eq('bike_type', bikeType)
@@ -737,7 +743,7 @@ app.put('/bikes/:id', async (req, res) => {
     if (status) updateData.status = status
     if (lockboxCode) updateData.lockbox_code = lockboxCode
 
-    const { data: updatedBike, error } = await supabase
+    const { data: updatedBike, error } = await supabaseAdmin
       .from('bikes')
       .update(updateData)
       .eq('id', req.params.id)
@@ -763,7 +769,7 @@ app.put('/bikes/:id', async (req, res) => {
 
 app.delete('/bikes/:id', async (req, res) => {
   try {
-    const { data: bike, error: fetchError } = await supabase
+    const { data: bike, error: fetchError } = await supabaseAdmin
       .from('bikes')
       .select('*')
       .eq('id', req.params.id)
@@ -779,7 +785,7 @@ app.delete('/bikes/:id', async (req, res) => {
       })
     }
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseAdmin
       .from('bikes')
       .delete()
       .eq('id', req.params.id)
