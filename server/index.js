@@ -43,7 +43,7 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
       .select('id, password, role, name')
       .eq('id', userId)
@@ -75,7 +75,7 @@ app.post('/register', async (req, res) => {
 
   try {
     // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUser, error: checkError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('id', userId)
@@ -87,7 +87,7 @@ app.post('/register', async (req, res) => {
     }
 
     // Create new user
-    const { data: newUser, error: createError } = await supabase
+    const { data: newUser, error: createError } = await supabaseAdmin
       .from('users')
       .insert({
         id: userId,
@@ -121,7 +121,7 @@ app.post('/admin/login', async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('admins')
       .select('id, username, name')
       .eq('username', username)
@@ -132,7 +132,7 @@ app.post('/admin/login', async (req, res) => {
     }
 
     // Check password (in production, use bcrypt)
-    const { data: adminData, error: pwError } = await supabase
+    const { data: adminData, error: pwError } = await supabaseAdmin
       .from('admins')
       .select('password')
       .eq('username', username)
