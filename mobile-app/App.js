@@ -321,21 +321,35 @@ function UserProfileScreen({ navigation }) {
   const handleLogout = async () => {
     try {
       console.log('[UserProfile] handleLogout() called');
-      Alert.alert('Signing Out', 'Please wait...');
+      console.log('[UserProfile] user context:', user);
+      console.log('[UserProfile] navigation context:', navigation);
       
       await logout();
       console.log('[UserProfile] logout() completed successfully');
       
       // Small delay to ensure state updates before navigation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       console.log('[UserProfile] Attempting navigation reset...');
       
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-      console.log('[UserProfile] Navigation reset completed');
+      // Force remove user from AsyncStorage immediately
+      try {
+        await AsyncStorage.clear();
+        console.log('[UserProfile] AsyncStorage fully cleared');
+      } catch (e) {
+        console.error('[UserProfile] Error clearing AsyncStorage:', e);
+      }
+      
+      if (navigation?.reset) {
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        console.log('[UserProfile] Navigation reset attempted');
+      } else {
+        console.error('[UserProfile] Navigation reset not available:', navigation);
+        Alert.alert('Error', 'Navigation failed - navigation context unavailable');
+      }
     } catch (err) {
       const errorMsg = err?.message || String(err);
-      console.error('[UserProfile] Logout failed:', errorMsg);
-      Alert.alert('Logout Error', `Failed to sign out: ${errorMsg}. Please try again.`);
+      console.error('[UserProfile] Logout failed:', errorMsg, err);
+      Alert.alert('Logout Error', `Failed to sign out: ${errorMsg}. Please refresh the page.`);
     }
   };
 
@@ -360,14 +374,25 @@ function UserProfileScreen({ navigation }) {
         </View>
 
         <View style={styles.logoutButtonContainer}>
-          <Button
-            title="Sign Out"
-            color="#d9534f"
-            onPress={() => Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Out', onPress: handleLogout, style: 'destructive' }
-            ])}
-          />
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={() => {
+              console.log('[UserProfile] SIGN OUT button pressed');
+              Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Sign Out', 
+                  onPress: () => {
+                    console.log('[UserProfile] Confirm logout pressed');
+                    handleLogout();
+                  }, 
+                  style: 'destructive' 
+                }
+              ]);
+            }}
+          >
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -672,10 +697,14 @@ function AuthProvider({ children }) {
     try {
       console.log('[AuthProvider] logout() called - clearing user state');
       setUser(null);
-      console.log('[AuthProvider] User state cleared');
+      console.log('[AuthProvider] User state cleared, user is now:', null);
       
-      const removed = await AsyncStorage.removeItem('user');
-      console.log('[AuthProvider] AsyncStorage cleared');
+      try {
+        await AsyncStorage.removeItem('user');
+        console.log('[AuthProvider] AsyncStorage user removed');
+      } catch (storageErr) {
+        console.error('[AuthProvider] Error removing user from AsyncStorage:', storageErr);
+      }
       
       return true;
     } catch (err) {
@@ -1079,5 +1108,17 @@ const styles = StyleSheet.create({
   },
   logoutButtonContainer: {
     marginTop: 20,
+  },
+  signOutButton: {
+    backgroundColor: '#d9534f',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  signOutButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
