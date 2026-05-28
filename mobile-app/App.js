@@ -320,12 +320,23 @@ function UserProfileScreen({ navigation }) {
 
   const handleLogout = async () => {
     try {
+      console.log('[UserProfile] handleLogout() called');
+      Alert.alert('Signing Out', 'Please wait...');
+      
       await logout();
+      console.log('[UserProfile] logout() completed successfully');
+      
+      // Small delay to ensure state updates before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('[UserProfile] Attempting navigation reset...');
+      
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      console.log('[UserProfile] Navigation reset completed');
     } catch (err) {
-      console.error('Logout failed', err);
+      const errorMsg = err?.message || String(err);
+      console.error('[UserProfile] Logout failed:', errorMsg);
+      Alert.alert('Logout Error', `Failed to sign out: ${errorMsg}. Please try again.`);
     }
-    // Ensure the navigation stack resets to the Login screen after logout
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   return (
@@ -658,8 +669,19 @@ function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem('user');
+    try {
+      console.log('[AuthProvider] logout() called - clearing user state');
+      setUser(null);
+      console.log('[AuthProvider] User state cleared');
+      
+      const removed = await AsyncStorage.removeItem('user');
+      console.log('[AuthProvider] AsyncStorage cleared');
+      
+      return true;
+    } catch (err) {
+      console.error('[AuthProvider] logout error:', err);
+      throw err;
+    }
   };
 
   return (
@@ -673,6 +695,15 @@ function AppNavigator() {
   const { user, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
+
+  // Log user state changes (for debugging logout issues)
+  useEffect(() => {
+    if (user) {
+      console.log('[AppNavigator] User logged in:', user.id);
+    } else {
+      console.log('[AppNavigator] User logged out or cleared');
+    }
+  }, [user]);
 
   useEffect(() => {
     const bootstrapAsync = async () => {
