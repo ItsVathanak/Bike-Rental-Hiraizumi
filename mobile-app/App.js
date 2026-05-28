@@ -378,17 +378,14 @@ function UserProfileScreen({ navigation }) {
             style={styles.signOutButton}
             onPress={() => {
               console.log('[UserProfile] SIGN OUT button pressed');
-              Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Sign Out', 
-                  onPress: () => {
-                    console.log('[UserProfile] Confirm logout pressed');
-                    handleLogout();
-                  }, 
-                  style: 'destructive' 
-                }
-              ]);
+              // Use browser confirm on web instead of Alert.alert for better web compatibility
+              const confirmed = window.confirm('Are you sure you want to sign out?');
+              if (confirmed) {
+                console.log('[UserProfile] Confirm logout pressed');
+                handleLogout();
+              } else {
+                console.log('[UserProfile] Logout cancelled');
+              }
             }}
           >
             <Text style={styles.signOutButtonText}>Sign Out</Text>
