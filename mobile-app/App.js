@@ -174,6 +174,8 @@ function LoginScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -199,6 +201,10 @@ function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/register`, {
@@ -211,6 +217,7 @@ function LoginScreen() {
         setIsRegistering(false);
         setUserId('');
         setPassword('');
+        setConfirmPassword('');
         setName('');
         setEmail('');
       } else {
@@ -256,13 +263,33 @@ function LoginScreen() {
         onChangeText={setUserId}
         autoCapitalize="none"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={[styles.input, styles.passwordInput]}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeButton}>
+          <Image source={require('./assets/eye.png')} style={styles.eyeIcon} />
+        </TouchableOpacity>
+      </View>
+
+      {isRegistering && (
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeButton}>
+            <Image source={require('./assets/eye.png')} style={styles.eyeIcon} />
+          </TouchableOpacity>
+        </View>
+      )}
       
       <Button
         title={isLoading ? (isRegistering ? 'Creating account...' : 'Logging in...') : (isRegistering ? 'Register' : 'Log In')}
@@ -277,6 +304,8 @@ function LoginScreen() {
           setIsRegistering(!isRegistering);
           setUserId('');
           setPassword('');
+          setConfirmPassword('');
+          setShowPassword(false);
           setName('');
           setEmail('');
         }}
@@ -290,8 +319,13 @@ function UserProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    await logout();
-    navigation.navigate('Login');
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Logout failed', err);
+    }
+    // Ensure the navigation stack resets to the Login screen after logout
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   return (
@@ -961,6 +995,22 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 12,
     paddingLeft: 8,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '80%',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeButton: {
+    marginLeft: 8,
+    marginBottom: 12,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
   },
   profileCard: {
     backgroundColor: '#fff',
