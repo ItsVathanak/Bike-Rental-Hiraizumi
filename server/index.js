@@ -550,6 +550,99 @@ app.post('/rentals/return', upload.single('photo'), async (req, res) => {
   }
 })
 
+// Force end a rental session without the normal return flow
+app.post('/rentals/force-end', async (req, res) => {
+  const { sessionId } = req.body
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId is required' })
+  }
+
+  try {
+    const { data: rental, error: fetchError } = await supabaseAdmin
+      .from('rentals')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single()
+
+    if (fetchError || !rental) {
+      return res.status(404).json({ message: 'Rental session not found.' })
+    }
+
+    if (rental.rental_status !== 'active') {
+      return res.status(409).json({
+        message: `Cannot force end a rental that is not active. Status: ${rental.rental_status}`,
+      })
+    }
+
+    const { data: bike } = await supabaseAdmin
+      .from('bikes')
+      .select('*')
+      .eq('id', rental.bike_id)
+      .single()
+
+    if (!bike) {
+      return res.status(404).json({ message: 'Associated bike not found.' })
+    }
+
+    const now = nowIso()
+    const events = rental.events || []
+    events.push({
+      type: 'rental_force_ended',
+      timestamp: now,
+      reason: 'admin_force_end',
+    })
+
+    const { error: updateRentalError } = await supabaseAdmin
+      .from('rentals')
+      .update({
+        rental_status: 'forced_ended',
+        ended_at: now,
+        events,
+      })
+      .eq('session_id', sessionId)
+
+    if (updateRentalError) throw updateRentalError
+
+    const { error: updateBikeError } = await supabaseAdmin
+      .from('bikes')
+      .update({ status: 'available' })
+      .eq('id', rental.bike_id)
+
+    if (updateBikeError) throw updateBikeError
+
+    await supabaseAdmin.from('notifications').insert({
+      to_user_id: rental.customer_id,
+      message: `Your rental for ${bike.name} was ended by an administrator.`,
+      read: false,
+    })
+
+    const { data: admins } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('role', 'admin')
+
+    if (admins && admins.length > 0) {
+      const adminNotifications = admins.map(admin => ({
+        to_user_id: admin.id,
+        message: `Bike ${bike.name} was force ended by an administrator.`,
+        read: false,
+      }))
+      await supabaseAdmin.from('notifications').insert(adminNotifications)
+    }
+
+    res.json({
+      message: 'Rental force ended successfully',
+      sessionId,
+      rentalStatus: 'forced_ended',
+      endedAt: now,
+    })
+  } catch (err) {
+    console.error('Error force ending rental:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 // Notifications
 app.get('/notifications/:userId', async (req, res) => {
   const { userId } = req.params

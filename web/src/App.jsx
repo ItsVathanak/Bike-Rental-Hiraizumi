@@ -197,6 +197,36 @@ export default function App() {
     }
   }
 
+  async function adminForceEndRental(sessionId) {
+    if (!window.confirm(`Force end rental session ${sessionId}? This will immediately mark the bike as available.`)) {
+      return;
+    }
+
+    setAdminError("");
+    setAdminSuccess("");
+
+    try {
+      const r = await fetch(`${API_BASE}/rentals/force-end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.message || data?.error || `HTTP ${r.status}`);
+
+      const message = data.message || `Rental ${sessionId} force ended successfully.`;
+      setAdminSuccess(message);
+      setNotifications(prev => [...prev, {message, timestamp: new Date().toISOString()}]);
+      await fetchRentals();
+      await fetchBikes();
+    } catch (err) {
+      const errorMsg = String(err.message || err);
+      setAdminError(errorMsg);
+      setNotifications(prev => [...prev, {message: `Error: ${errorMsg}`, timestamp: new Date().toISOString()}]);
+    }
+  }
+
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -726,6 +756,7 @@ export default function App() {
                     <th className="p-2">Status</th>
                     <th className="p-2">Started</th>
                     <th className="p-2">Ended</th>
+                    <th className="p-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -741,6 +772,8 @@ export default function App() {
                               ? "bg-blue-100 text-blue-800"
                               : rental.rentalStatus === "returned"
                               ? "bg-gray-100 text-gray-800"
+                              : rental.rentalStatus === "forced_ended"
+                              ? "bg-red-100 text-red-800"
                               : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
@@ -750,6 +783,18 @@ export default function App() {
                       <td className="p-2">{new Date(rental.startedAt).toLocaleString()}</td>
                       <td className="p-2">
                         {rental.endedAt ? new Date(rental.endedAt).toLocaleString() : "-"}
+                      </td>
+                      <td className="p-2">
+                        {rental.rentalStatus === "active" ? (
+                          <button
+                            onClick={() => adminForceEndRental(rental.sessionId)}
+                            className="text-red-600 hover:underline text-sm font-medium"
+                          >
+                            Force End
+                          </button>
+                        ) : (
+                          <span className="text-slate-400 text-sm">-</span>
+                        )}
                       </td>
                     </tr>
                   ))}
