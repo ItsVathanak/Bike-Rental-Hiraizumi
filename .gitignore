@@ -34,3 +34,4 @@ Thumbs.db
 # Misc
 .cache/
 *.log
+mobile-app/config.js
