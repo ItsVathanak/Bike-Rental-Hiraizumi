@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expo Go — Scan QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 2rem auto; padding: 0 1rem; text-align: center; }
+    canvas { margin: 1rem auto; display: block; }
+    code { background: #f0f0f0; padding: 0.2rem 0.5rem; border-radius: 4px; word-break: break-all; }
+    p { color: #444; line-height: 1.5; }
+    .warn { background: #fff8e6; border: 1px solid #e6c200; padding: 0.75rem; border-radius: 8px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Expo Go QR</h1>
+  <p>Scan with <strong>Expo Go</strong> (same Wi‑Fi as this Mac).</p>
+  <canvas id="qr"></canvas>
+  <p>Or in Expo Go → <strong>Enter URL manually</strong>:</p>
+  <p><code id="url"></code></p>
+  <div class="warn">
+    Metro must be running: <code>npm start</code> in <code>mobile-app</code>.<br />
+    API for the app: <code id="api"></code>
+  </div>
+  <script>
+    const LAN = '192.168.0.241';
+    const expUrl = 'exp://' + LAN + ':8081';
+    const apiUrl = 'http://' + LAN + ':8787';
+    document.getElementById('url').textContent = expUrl;
+    document.getElementById('api').textContent = apiUrl;
+    QRCode.toCanvas(document.getElementById('qr'), expUrl, { width: 280, margin: 2 });
+  </script>
+</body>
+</html>

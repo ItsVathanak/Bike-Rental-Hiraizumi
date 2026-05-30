@@ -2,13 +2,11 @@ import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Button, FlatList, ActivityIndicator, Alert, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
+import { StyleSheet, Text, View, Button, FlatList, ActivityIndicator, Alert, TextInput, TouchableOpacity, Image, Modal, Platform } from 'react-native';
 import { useState, useEffect, createContext, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
-
-const API_BASE_URL = 'https://bike-rental-hiraizumi.onrender.com';
+import { API_BASE_URL } from './config.js';
 
 // 1. Create Auth Context
 const AuthContext = createContext();
@@ -22,8 +20,121 @@ function ActiveRentalScreen({ route, navigation }) {
   const [isReturning, setReturning] = useState(false);
   const { user } = useAuth();
   const [returnStep, setReturnStep] = useState('initial');
-  const [photo, setPhoto] = useState(null);
+  const [photoAsset, setPhotoAsset] = useState(null);
   const [rentalSession, setRentalSession] = useState(rental);
+
+  const applyPhotoAsset = (asset) => {
+    setPhotoAsset(asset);
+    setReturnStep('photoTaken');
+  };
+
+  const handleWebPhotoInput = () => {
+    if (typeof document === 'undefined') {
+      Alert.alert('Camera unavailable', 'Please open this page in a mobile browser.');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.setAttribute('capture', 'environment');
+    input.style.display = 'none';
+
+    input.onchange = (event) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        applyPhotoAsset({
+          uri: URL.createObjectURL(file),
+          file,
+          mimeType: file.type || 'image/jpeg',
+        });
+      }
+      input.remove();
+    };
+
+    document.body.appendChild(input);
+    input.click();
+  };
+
+  const handleTakePhoto = async () => {
+    if (Platform.OS === 'web') {
+      handleWebPhotoInput();
+      return;
+    }
+
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Camera permission needed', 'Please allow camera access to take a return photo.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.7,
+        cameraType: ImagePicker.CameraType.back,
+      });
+
+      if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        applyPhotoAsset({
+          uri: asset.uri,
+          file: asset.file,
+          mimeType: asset.mimeType || 'image/jpeg',
+        });
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      Alert.alert('Camera error', 'Could not open the camera. Try choosing a photo from your library instead.');
+    }
+  };
+
+  const handlePickFromLibrary = async () => {
+    if (Platform.OS === 'web') {
+      if (typeof document === 'undefined') return;
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.style.display = 'none';
+      input.onchange = (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          applyPhotoAsset({
+            uri: URL.createObjectURL(file),
+            file,
+            mimeType: file.type || 'image/jpeg',
+          });
+        }
+        input.remove();
+      };
+      document.body.appendChild(input);
+      input.click();
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Photo library permission needed', 'Please allow photo library access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      applyPhotoAsset({
+        uri: asset.uri,
+        file: asset.file,
+        mimeType: asset.mimeType || 'image/jpeg',
+      });
+    }
+  };
 
   const startReturnProcess = async () => {
     try {
@@ -46,42 +157,29 @@ function ActiveRentalScreen({ route, navigation }) {
     }
   };
 
-  const handleTakePhoto = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Sorry, we need camera permissions to make this work!');
-      return;
-    }
-
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setPhoto(result.assets[0].uri);
-      setReturnStep('photoTaken');
-    }
-  };
-
   const returnBike = async () => {
     if (!user || !rentalSession?.sessionId) {
-      alert('An error occurred. Missing user or session ID.');
+      Alert.alert('Error', 'Missing user or session ID.');
+      return;
+    }
+    if (!photoAsset) {
+      Alert.alert('Photo required', 'Please take a photo of the locked bike before submitting.');
       return;
     }
     setReturning(true);
     try {
       const formData = new FormData();
       formData.append('sessionId', rentalSession.sessionId);
-      
-      if (photo) {
-        const uriParts = photo.split('.');
-        const fileType = uriParts[uriParts.length - 1];
+
+      if (Platform.OS === 'web' && photoAsset.file) {
+        formData.append('photo', photoAsset.file, photoAsset.file.name || 'photo.jpg');
+      } else {
+        const uriParts = photoAsset.uri.split('.');
+        const fileType = uriParts[uriParts.length - 1]?.split('?')[0] || 'jpg';
         formData.append('photo', {
-          uri: photo,
+          uri: photoAsset.uri,
           name: `photo.${fileType}`,
-          type: `image/${fileType}`,
+          type: photoAsset.mimeType || `image/${fileType}`,
         });
       }
 
@@ -91,8 +189,8 @@ function ActiveRentalScreen({ route, navigation }) {
       });
 
       if (response.ok) {
-        alert('Bike returned successfully!');
-        setPhoto(null);
+        Alert.alert('Success', 'Bike returned successfully!');
+        setPhotoAsset(null);
         setReturnStep('initial');
         navigation.reset({
           index: 0,
@@ -100,11 +198,11 @@ function ActiveRentalScreen({ route, navigation }) {
         });
       } else {
         const errorData = await response.json();
-        alert(`Failed to return bike: ${errorData.message}`);
+        Alert.alert('Return failed', errorData.message || 'Could not submit return.');
       }
     } catch (error) {
       console.error(error);
-      alert('An error occurred while returning the bike.');
+      Alert.alert('Error', 'An error occurred while returning the bike.');
     } finally {
       setReturning(false);
     }
@@ -152,12 +250,20 @@ function ActiveRentalScreen({ route, navigation }) {
             title="Take Photo of Locked Bike"
             onPress={handleTakePhoto}
           />
+          <View style={{marginTop: 10}} />
+          <Button
+            title="Choose Photo from Library"
+            onPress={handlePickFromLibrary}
+          />
         </View>
       )}
 
-      {returnStep === 'photoTaken' && photo && (
+      {returnStep === 'photoTaken' && photoAsset && (
         <View>
           <Text style={styles.detail}>Photo taken. Ready to submit?</Text>
+          {photoAsset.uri ? (
+            <Image source={{ uri: photoAsset.uri }} style={{ width: '100%', height: 200, marginVertical: 12, borderRadius: 8 }} resizeMode="cover" />
+          ) : null}
           <View style={{marginTop: 15}} />
           <Button
             title={isReturning ? "Submitting..." : "Submit Return"}
